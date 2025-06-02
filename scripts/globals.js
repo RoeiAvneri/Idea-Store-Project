@@ -7,7 +7,7 @@ class IdeaBoxManager {
         }
         this.ideas = new Map(); // Map of localId -> element
         this.nextId = 1;
-        this.serverUrl = 'https://your-render-app.onrender.com'; // Replace with your actual Render URL
+        this.serverUrl = 'https://idea-store-project.onrender.com'; // Replace with your actual Render URL
     }
 
     __DEV_LEVEL_pre_loading_box_scanner() {
@@ -387,7 +387,7 @@ function ConfigInfoPage(elementId, situation) {
 
 // MISSING FUNCTION: Send new content to server
 async function SendLoadout(content, title = null) {
-    const serverUrl = 'https://your-render-app.onrender.com'; // Replace with your actual URL
+    const serverUrl = 'https://idea-store-project.onrender.com'; // Replace with your actual URL
     
     try {
         const response = await fetch(`${serverUrl}/save`, {
@@ -415,7 +415,7 @@ async function SendLoadout(content, title = null) {
 
 // Get entries from server
 async function GetLoadout(id) {
-    const serverUrl = 'https://your-render-app.onrender.com'; // Replace with your actual URL
+    const serverUrl = 'https://idea-store-project.onrender.com'; // Replace with your actual URL
     const url = id ? `${serverUrl}/entries/${id}` : `${serverUrl}/entries`;
     const specificErrorCodeBase = id ? "GL-002" : "GL-001";
     const jsonErrorCode = id ? "GL-004" : "GL-003";
@@ -447,7 +447,7 @@ async function GetLoadout(id) {
 
 // Get full content from server
 async function GetLoadoutContent(id, title) {
-    const serverUrl = 'https://your-render-app.onrender.com'; // Replace with your actual URL
+    const serverUrl = 'https://idea-store-project.onrender.com'; // Replace with your actual URL
     id = id || '';
     title = title || '';
 
@@ -509,7 +509,7 @@ async function GetLoadoutContent(id, title) {
 
 // Update content on server
 async function updateLoadoutContent(id, newTextContent) {
-    const serverUrl = 'https://your-render-app.onrender.com'; // Replace with your actual URL
+    const serverUrl = 'https://idea-store-project.onrender.com'; // Replace with your actual URL
     
     try {
         const response = await fetch(`${serverUrl}/update/${id}`, {
