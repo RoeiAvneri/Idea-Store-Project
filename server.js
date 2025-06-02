@@ -55,6 +55,22 @@ if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
 
 const DB_PATH = process.env.NODE_ENV === 'production' ? '/var/data/meta.db' : 'meta.db';
 
+if (process.env.NODE_ENV === 'production') {
+  const dbDirectory = path.dirname(DB_PATH); // This will be '/var/data'
+  if (!fs.existsSync(dbDirectory)) {
+    try {
+      fs.mkdirSync(dbDirectory, { recursive: true });
+      console.log(`Successfully created database directory: ${dbDirectory}`);
+    } catch (err) {
+      console.error(`FATAL: Error creating database directory ${dbDirectory}:`, err);
+      // If you can't create the directory, the app likely can't run.
+      // It's better to throw an error and let the process exit so Render can restart it,
+      // rather than continuing with a broken state.
+      throw new Error(`Failed to create database directory for SQLite: ${err.message}`);
+    }
+  }
+}
+
 // Setup database
 const db = new Database(DB_PATH, { verbose: console.log });
 db.prepare(`
