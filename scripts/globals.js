@@ -3,23 +3,22 @@ class IdeaBoxManager {
         this.container = document.querySelector(containerSelector);
         if (!this.container) {
             displayError("IBM-001"); // Container not found
-            // No return here, let it fail later if methods are called,
-            // or throw new Error after displayError if it should halt.
+            return;
         }
-        this.ideas = new Map(); // Map of id -> element
-        this.nextId = 1; // For local client-side ID generation if needed before server ID
+        this.ideas = new Map(); // Map of localId -> element
+        this.nextId = 1;
+        this.serverUrl = 'https://your-render-app.onrender.com'; // Replace with your actual Render URL
     }
 
     __DEV_LEVEL_pre_loading_box_scanner() {
         if (!this.container) {
-             // IBM-001 would have been shown by constructor
             return;
         }
         
         const existingIdeas = this.container.querySelectorAll(".idea-content");
         let maxId = 0;
         existingIdeas.forEach((el) => {
-            const idStr = el.dataset.ideaId || el.dataset.localId; // Prefer localId if it exists
+            const idStr = el.dataset.localId;
             const id = parseInt(idStr);
             if (!isNaN(id)) {
                 this.ideas.set(id, el);
@@ -29,32 +28,47 @@ class IdeaBoxManager {
         this.nextId = maxId + 1;
     }
 
-    // localId is purely for client-side tracking before/without a server ID
-    addIdea(title, description, serverId = null, localId = null) {
+    // Load all ideas from server on page load
+    async loadAllIdeasFromServer() {
+        try {
+            const entries = await GetLoadout();
+            if (entries && Array.isArray(entries)) {
+                entries.forEach(entry => {
+                    this.addIdea(entry.title, `Loaded from server...`, entry.id, null, true);
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load ideas from server:', error);
+            displayError("IBM-008"); // Failed to load from server
+        }
+    }
+
+    // Modified to handle server synchronization
+    addIdea(title, description, serverId = null, localId = null, skipServerSync = false) {
         if (!this.container) {
-            displayError("IBM-001"); // Container not available (already handled by constructor ideally)
+            displayError("IBM-001");
             return null;
         }
 
         const currentId = localId || this.nextId++;
 
         if (!title || title.trim() === "" || title === "undefined") {
-            displayError("IBM-002"); // Title cannot be empty or undefined
-            return null; // Indicate failure
+            displayError("IBM-002");
+            return null;
         }
 
         if (!description || description.trim() === "" || description === "undefined") {
-            description = "No description provided."; // Default, not an error
+            description = "No description provided.";
         }
 
         const ideaElement = document.createElement("div");
         ideaElement.classList.add("idea-content");
-        ideaElement.dataset.localId = currentId; // Use localId for map key and internal reference
+        ideaElement.dataset.localId = currentId;
         if (serverId) {
             ideaElement.dataset.serverId = serverId;
         }
         ideaElement.dataset.ideaTitle = title;
-        ideaElement.dataset.ideaDescription = description; // Store initial full description if different from snippet
+        ideaElement.dataset.ideaDescription = description;
 
         const topMenu = document.createElement("div");
         topMenu.classList.add("box_top_menu");
@@ -67,6 +81,11 @@ class IdeaBoxManager {
         closeBtn.textContent = "X";
         closeBtn.type = "button";
         closeBtn.setAttribute('aria-label', 'Delete idea');
+        
+        // Add delete functionality
+        closeBtn.addEventListener('click', () => {
+            this.removeIdeaByLocalId(currentId);
+        });
 
         topRight.appendChild(closeBtn);
         topMenu.appendChild(topRight);
@@ -78,23 +97,14 @@ class IdeaBoxManager {
         h2.textContent = title;
 
         const p = document.createElement("p");
-        // Description for display might be a snippet
         p.textContent = description.length > 100 ? description.substring(0, 97) + "..." : description;
 
         const button = document.createElement("button");
         button.type = "button";
-        button.classList.add("idea-button"); // For "View Details"
+        button.classList.add("idea-button");
         button.textContent = "View Details";
-        button.addEventListener('click', () => {
-            // Assuming showInfoPage is globally available from logic_home.js or similar
-            // It would typically use serverId to fetch full content.
-            if (typeof ConfigInfoPage === 'function' && typeof marked !== 'undefined' && typeof hljs !== 'undefined') {
-                 // This is a simplified call, showInfoPage needs context (e.g. serverId)
-                 // The actual showing is now handled by event listener in logic_home.js
-                 // console.log(`View details for localId: ${currentId}, serverId: ${serverId}`);
-            } else {
-                displayError("IBM-003"); // Dependency function missing (ConfigInfoPage)
-            }
+        button.addEventListener('click', async () => {
+            await this.showIdeaDetails(currentId);
         });
 
         contentBox.appendChild(h2);
@@ -107,14 +117,93 @@ class IdeaBoxManager {
         this.ideas.set(currentId, ideaElement);
         this.container.appendChild(ideaElement);
 
+        // Save to server if this is a new idea (not loaded from server)
+        if (!skipServerSync && !serverId) {
+            this.saveIdeaToServer(currentId, title, description);
+        }
+
         return currentId;
     }
 
-    // id here refers to localId
+    // Save new idea to server
+    async saveIdeaToServer(localId, title, description) {
+        try {
+            const content = `# ${title}\n\n${description}`;
+            const result = await SendLoadout(content, title);
+            if (result && result.success) {
+                // Update the element with server ID
+                const element = this.ideas.get(localId);
+                if (element) {
+                    element.dataset.serverId = result.id;
+                }
+                console.log(`Idea ${localId} saved to server with ID ${result.id}`);
+            }
+        } catch (error) {
+            console.error('Failed to save idea to server:', error);
+            displayError("IBM-009"); // Failed to save to server
+        }
+    }
+
+    // Show full idea details
+    async showIdeaDetails(localId) {
+        const idea = this.ideas.get(parseInt(localId));
+        if (!idea) {
+            displayError("IBM-004");
+            return;
+        }
+
+        const serverId = idea.dataset.serverId;
+        let content = idea.dataset.ideaDescription;
+
+        // If we have a server ID, fetch full content from server
+        if (serverId) {
+            try {
+                const fullContent = await GetLoadoutContent(serverId);
+                if (fullContent) {
+                    content = fullContent;
+                }
+            } catch (error) {
+                console.error('Failed to fetch full content:', error);
+                // Continue with cached content
+            }
+        }
+
+        // Show in modal/overlay
+        this.displayContentModal(idea.dataset.ideaTitle, content);
+    }
+
+    // Display content in modal
+    displayContentModal(title, content) {
+        const modalHtml = `
+            <div class="modal-header">
+                <h2>${title}</h2>
+                <button type="button" class="close-modal" onclick="ConfigInfoPage('overlayBackground', 'hide')">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="content-display">${this.formatContent(content)}</div>
+            </div>
+        `;
+
+        const modalContent = document.querySelector('.idea-bodyOfInformation-page');
+        if (modalContent) {
+            modalContent.innerHTML = modalHtml;
+            ConfigInfoPage('overlayBackground', 'show');
+        }
+    }
+
+    // Format content for display (handle markdown if needed)
+    formatContent(content) {
+        if (typeof marked !== 'undefined') {
+            return marked.parse(content);
+        }
+        // Fallback: simple text formatting
+        return content.replace(/\n/g, '<br>');
+    }
+
     setContent(localId, title, description) {
         const idea = this.ideas.get(parseInt(localId));
         if (!idea) {
-            displayError("IBM-004"); // Idea with ID not found
+            displayError("IBM-004");
             return false;
         }
 
@@ -123,18 +212,35 @@ class IdeaBoxManager {
 
         if (h2 && title) h2.textContent = title;
         if (p && description) {
-            // Update displayed description snippet
             p.textContent = description.length > 100 ? description.substring(0, 97) + "..." : description;
         }
 
-
         if (title) idea.dataset.ideaTitle = title;
-        if (description) idea.dataset.ideaDescription = description; // Store full description
+        if (description) idea.dataset.ideaDescription = description;
+
+        // Update on server if we have a server ID
+        const serverId = idea.dataset.serverId;
+        if (serverId) {
+            this.updateIdeaOnServer(serverId, title, description);
+        }
 
         return true;
     }
 
-    // id here refers to localId
+    // Update idea on server
+    async updateIdeaOnServer(serverId, title, description) {
+        try {
+            const content = `# ${title}\n\n${description}`;
+            const success = await updateLoadoutContent(serverId, content);
+            if (!success) {
+                displayError("IBM-010"); // Failed to update on server
+            }
+        } catch (error) {
+            console.error('Failed to update idea on server:', error);
+            displayError("IBM-010");
+        }
+    }
+
     getContent(localId) {
         const idea = this.ideas.get(parseInt(localId));
         if (!idea) return null;
@@ -143,61 +249,96 @@ class IdeaBoxManager {
             localId: parseInt(idea.dataset.localId),
             serverId: idea.dataset.serverId || null,
             title: idea.dataset.ideaTitle,
-            description: idea.dataset.ideaDescription // Return full stored description
+            description: idea.dataset.ideaDescription
         };
     }
 
     getLastLocalId() {
         if (this.ideas.size === 0) return null;
-        // nextId is already 1 more than the last assigned localId
         return this.nextId - 1;
     }
     
-    // id here refers to localId
     appendContent(localId, extraText) {
         const idea = this.ideas.get(parseInt(localId));
         if (!idea) {
-            displayError("IBM-005"); // Idea with ID not found
+            displayError("IBM-005");
             return false;
         }
 
         const p = idea.querySelector(".box_content p");
         if (p) {
             const fullDescription = idea.dataset.ideaDescription + ` ${extraText}`;
-            idea.dataset.ideaDescription = fullDescription; // Update full description
-            // Update displayed snippet
+            idea.dataset.ideaDescription = fullDescription;
             p.textContent = fullDescription.length > 100 ? fullDescription.substring(0, 97) + "..." : fullDescription;
+            
+            // Update on server
+            const serverId = idea.dataset.serverId;
+            if (serverId) {
+                this.updateIdeaOnServer(serverId, idea.dataset.ideaTitle, fullDescription);
+            }
         }
         return true;
     }
 
-    // id here refers to localId
-    removeIdeaByLocalId(localId) {
+    async removeIdeaByLocalId(localId) {
         const numId = parseInt(localId);
         if (isNaN(numId)) {
-            displayError("IBM-006"); // Invalid ID provided
+            displayError("IBM-006");
             return false;
         }
 
         const element = this.ideas.get(numId);
         if (element) {
-            // Dispatch custom event with localId and serverId if available
+            const serverId = element.dataset.serverId;
+            
+            // Delete from server first if we have a server ID
+            if (serverId) {
+                try {
+                    await this.deleteIdeaFromServer(serverId);
+                } catch (error) {
+                    console.error('Failed to delete from server:', error);
+                    // Continue with local deletion even if server deletion fails
+                }
+            }
+
+            // Dispatch custom event
             document.body.dispatchEvent(new CustomEvent("ideaRemoved", { 
-                detail: { localId: numId, serverId: element.dataset.serverId } 
+                detail: { localId: numId, serverId: serverId } 
             }));
             
             element.remove();
             this.ideas.delete(numId);
             
-            // console.log(`Idea with local ID ${numId} removed successfully from UI.`); // For debugging
             return true;
         } else {
-            displayError("IBM-007"); // Idea with ID not found
+            displayError("IBM-007");
             return false;
         }
     }
 
-    getAllIdeas() { // Returns data of all ideas managed locally
+    // Delete idea from server
+    async deleteIdeaFromServer(serverId) {
+        try {
+            const response = await fetch(`${this.serverUrl}/delete/${serverId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`Server responded with ${response.status}`);
+            }
+
+            const result = await response.json();
+            return result.success;
+        } catch (error) {
+            console.error('Delete from server failed:', error);
+            throw error;
+        }
+    }
+
+    getAllIdeas() {
         return Array.from(this.ideas.values()).map(element => ({
             localId: parseInt(element.dataset.localId),
             serverId: element.dataset.serverId || null,
@@ -208,23 +349,23 @@ class IdeaBoxManager {
 
     clear() {
         if (!this.container && this.ideas.size > 0) {
-             // IBM-001 might have been shown; still, trying to clear without container is problematic
-             console.warn("IdeaBoxManager: Attempting to clear ideas but container is invalid.");
+            console.warn("IdeaBoxManager: Attempting to clear ideas but container is invalid.");
         }
         this.ideas.forEach((element) => {
             element.remove();
         });
         this.ideas.clear();
-        this.nextId = 1; // Reset local ID counter
+        this.nextId = 1;
     }
 }
 
+// Modal configuration function
 function ConfigInfoPage(elementId, situation) {
-    const element = document.getElementById(elementId); // e.g. 'overlayBackground'
-    const page = document.querySelector('.idea-bodyOfInformation-page'); // The modal content itself
+    const element = document.getElementById(elementId);
+    const page = document.querySelector('.idea-bodyOfInformation-page');
     
     if (!element || !page) {
-        displayError("CFG-001"); // Required elements not found
+        displayError("CFG-001");
         return;
     }
     
@@ -244,49 +385,39 @@ function ConfigInfoPage(elementId, situation) {
     }
 }
 
-async function SendLoadout(title, content) {
-    // Parameter check is now done by the caller which uses SL-003
-    const responseElement = document.getElementById('response'); // Assume it exists
-
+// MISSING FUNCTION: Send new content to server
+async function SendLoadout(content, title = null) {
+    const serverUrl = 'https://your-render-app.onrender.com'; // Replace with your actual URL
+    
     try {
-        const res = await fetch('https://idea-store-project.onrender.com:10000/save', {
+        const response = await fetch(`${serverUrl}/save`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'text/plain', // Server expects title in query, content in body
-                'X-Entry-Title': encodeURIComponent(title) // Send title via header as an example, adjust if server expects query param
+                'Content-Type': 'text/plain',
+                ...(title && { 'X-Entry-Title': title })
             },
             body: content
         });
 
-        if (!res.ok) {
-            displayError("SL-004"); // POST request failed on server
-            if (responseElement) responseElement.innerText = '❌ Error saving idea (Server).';
-            return; // Exit on server error
+        if (!response.ok) {
+            displayError("SL-001"); // Failed to save to server
+            throw new Error(`Server responded with ${response.status}`);
         }
 
-        try {
-            const data = await res.json();
-            if (responseElement) {
-                responseElement.innerText =
-                    `✅ Saved as ${data.filename} (Title: "${data.title}")`;
-            }
-            // Redirect to home page after successful save
-            setTimeout(() => {
-                window.location.href = 'index.html';
-            }, 1500);
-        } catch (jsonErr) {
-            displayError("SL-002"); // Response not valid JSON
-            if (responseElement) responseElement.innerText = '❌ Error saving idea (Bad Response).';
-        }
-    } catch (err) {
-        displayError("SL-001"); // Failed to send POST request (network error)
-        if (responseElement) responseElement.innerText = '❌ Error saving idea (Network).';
+        const result = await response.json();
+        return result;
+    } catch (error) {
+        console.error('SendLoadout error:', error);
+        displayError("SL-002"); // Network error during save
+        throw error;
     }
 }
 
+// Get entries from server
 async function GetLoadout(id) {
-    const url = id ? `https://idea-store-project.onrender.com:10000/entries/${id}` : 'https://idea-store-project.onrender.com:10000/entries';
-    const specificErrorCodeBase = id ? "GL-002" : "GL-001"; // GL-002 for single, GL-001 for list
+    const serverUrl = 'https://your-render-app.onrender.com'; // Replace with your actual URL
+    const url = id ? `${serverUrl}/entries/${id}` : `${serverUrl}/entries`;
+    const specificErrorCodeBase = id ? "GL-002" : "GL-001";
     const jsonErrorCode = id ? "GL-004" : "GL-003";
 
     try {
@@ -296,150 +427,136 @@ async function GetLoadout(id) {
         });
 
         if (!res.ok) {
-            displayError(specificErrorCodeBase); // Failed to fetch (specific or list)
-            throw new Error(`Server responded with ${res.status}`); // Throw to be caught by caller
+            displayError(specificErrorCodeBase);
+            throw new Error(`Server responded with ${res.status}`);
         }
 
         try {
             return await res.json();
         } catch (jsonErr) {
-            displayError(jsonErrorCode); // Response not valid JSON
-            throw jsonErr; // Re-throw to be caught by caller
+            displayError(jsonErrorCode);
+            throw jsonErr;
         }
     } catch (err) {
-        // If not already one of our specific errors, it's a network one
-        if (err.message.startsWith("Server responded with")) {
-             // displayError was already called for !res.ok
-        } else {
-            displayError(specificErrorCodeBase); // Covers network errors too for simplicity here
+        if (!err.message.startsWith("Server responded with")) {
+            displayError(specificErrorCodeBase);
         }
-        throw err; // Re-throw to be caught by caller or general handler
+        throw err;
     }
 }
 
-
+// Get full content from server
 async function GetLoadoutContent(id, title) {
+    const serverUrl = 'https://your-render-app.onrender.com'; // Replace with your actual URL
     id = id || '';
     title = title || '';
 
     if (id === '' && title === '') {
-        displayError("GLC-001"); // Neither ID nor title provided
-        return null; // Return null or throw to indicate failure clearly
+        displayError("GLC-001");
+        return null;
     }
     if (id && isNaN(parseInt(id))) {
-        displayError("GLC-002"); // ID is not a number
+        displayError("GLC-002");
         return null;
     }
     if (title && typeof title !== 'string') {
-        displayError("GLC-003"); // Title is not a string
+        displayError("GLC-003");
         return null;
     }
 
-    let file_load;
+    let driveFileId;
 
     try {
-        if (id !== '') { // Fetch by ID
+        if (id !== '') {
+            // Get entry metadata to find the Google Drive file ID
             const load = await GetLoadout(id);
             if (!load || !load.filename) {
-                displayError("GLC-006"); // Failed to get entry metadata (e.g. GetLoadout failed or returned bad data)
+                displayError("GLC-006");
                 return null;
             }
-            file_load = load.filename;
-        } else if (title) { // Fetch by title (implies id === '')
-            const allEntries = await GetLoadout(); // Fetches all entries
+            driveFileId = load.filename; // This is the Google Drive file ID
+        } else if (title) {
+            const allEntries = await GetLoadout();
             const entry = allEntries.find(e => e.title === title);
             if (!entry || !entry.filename) {
-                displayError("GLC-004"); // No entry found by title (or entry malformed)
+                displayError("GLC-004");
                 return null;
             }
-            file_load = entry.filename;
+            driveFileId = entry.filename;
         }
 
-        if (!file_load) {
-             // Errors displayed above should cover this path.
+        if (!driveFileId) {
             return null;
         }
         
-        const resp = await fetch(`https://idea-store-project.onrender.com:10000/load/${file_load}`);
+        // Use the corrected endpoint that matches your server.js
+        const resp = await fetch(`${serverUrl}/load/${driveFileId}`);
         if (!resp.ok) {
-            displayError("GLC-005"); // Failed to fetch file content (server error)
+            displayError("GLC-005");
             return null;
         }
         return await resp.text();
 
     } catch (err) {
-        // Errors from GetLoadout (GL-001, GL-002 etc) will be caught here
-        // If it's a direct fetch error for /load/
-        if (err instanceof TypeError) { // typically network errors from fetch
-            displayError("GLC-007"); // Network error fetching file content
+        if (err instanceof TypeError) {
+            displayError("GLC-007");
         } else {
-            // This will catch errors propagated from GetLoadout or other unexpected issues
-            // displayError("GEN-001"); // General async error in this function
-            // Errors from GetLoadout should have already called displayError.
-            console.error("GetLoadoutContent encountered an issue:", err)
+            console.error("GetLoadoutContent encountered an issue:", err);
         }
         return null;
     }
 }
 
-
+// Update content on server
 async function updateLoadoutContent(id, newTextContent) {
-  try {
-    const response = await fetch(`https://idea-store-project.onrender.com:10000/update/${id}`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'text/plain' },
-      body: newTextContent
-    });
+    const serverUrl = 'https://your-render-app.onrender.com'; // Replace with your actual URL
+    
+    try {
+        const response = await fetch(`${serverUrl}/update/${id}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'text/plain' },
+            body: newTextContent
+        });
 
-    if (!response.ok) {
-      displayError("ULC-001"); // PUT request to update failed
-      try {
-        const errData = await response.json();
-        if (errData && errData.error) {
-          // Optional: Add more detail if server sends specific error message
-          // This could be a new error code or an enhancement to ULC-002
-          console.warn("Server error details on update:", errData.error);
-          displayError("ULC-002"); // Server returned error payload
+        if (!response.ok) {
+            displayError("ULC-001");
+            try {
+                const errData = await response.json();
+                if (errData && errData.error) {
+                    console.warn("Server error details on update:", errData.error);
+                    displayError("ULC-002");
+                }
+            } catch (jsonErr) {
+                displayError("ULC-003");
+            }
+            return false;
         }
-      } catch (jsonErr) {
-        displayError("ULC-003"); // Update error response not valid JSON
-      }
-      return false;
+        return true;
+    } catch (err) {
+        displayError("ULC-001");
+        return false;
     }
-    return true;
-  } catch (err) {
-    displayError("ULC-001"); // Treat network errors also as ULC-001 (general PUT failure)
-    return false;
-  }
 }
 
+// Test function for loading data
 async function loadAndUseData() {
     try {
-        const entries = await GetLoadout(); // all entries
+        const entries = await GetLoadout();
         if (entries) console.log("All Entries:", entries);
 
-        const singleEntry = await GetLoadout(1); // entry with ID 1
+        const singleEntry = await GetLoadout(1);
         if (singleEntry) console.log("Single Entry (ID 1):", singleEntry);
 
     } catch (err) {
-        // GetLoadout already calls displayError for its specific issues (GL-001, GL-002, etc.)
-        // This catch is for any other unexpected error during the process or if GetLoadout re-throws.
-        // If GetLoadout handles its errors and returns null/throws, this might not always need a generic GEN-001.
-        // console.error('loadAndUseData failed overall:', err); // Keep for debugging
-        // displayError("GEN-001"); // A general "something went wrong here"
+        console.error('loadAndUseData failed overall:', err);
     }
 }
 
-// The global RaiseError function is superseded by displayError from ErrorHandler.js
-// So it's removed from here.
-
-// Make class available globally
+// Make everything available globally
 window.IdeaBoxManager = IdeaBoxManager;
-
 window.SendLoadout = SendLoadout;
 window.GetLoadout = GetLoadout;
 window.GetLoadoutContent = GetLoadoutContent;
 window.updateLoadoutContent = updateLoadoutContent;
 window.loadAndUseData = loadAndUseData;
-
 window.ConfigInfoPage = ConfigInfoPage;
