@@ -5,7 +5,8 @@
     "cors": "^2.8.5",
     "express": "^5.1.0",
     "marked": "^15.0.12",
-    "googleapis": "^119.0.0"
+    "googleapis": "^118.0.0"
+
   },
   "name": "ideas-stores-project",
   "version": "1.0.0",
