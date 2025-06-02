@@ -26,9 +26,10 @@ app.get('/:page', (req, res, next) => {
 
 const DATA_DIR = path.join(__dirname, 'dataset');
 if (!fs.existsSync(DATA_DIR)) fs.mkdirSync(DATA_DIR);
+const DB_PATH = process.env.NODE_ENV === 'production' ? '/var/data/meta.db' : 'meta.db';
 
 // Setup database
-const db = new Database('meta.db');
+const db = new Database(DB_PATH, { verbose: console.log });
 db.prepare(`
   CREATE TABLE IF NOT EXISTS entries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
