@@ -6,7 +6,7 @@ const zlib = require('zlib');
 const path = require('path');
 const Database = require('better-sqlite3');
 
-const { uploadFileToDrive } = require('./driveHelper');
+const { uploadFileToDrive } = require('driveHelper');
 
 
 // Setup
