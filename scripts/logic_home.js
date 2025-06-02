@@ -209,16 +209,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.location.href = `create_new_idea.html#load=true&entry=${serverId}§ion=content`;
     });
 
-    document.addEventListener('click', function(e) {
-        const traget = document.querySelectorAll('#add-idea-button');
-        if (traget.length === 0) {
-            displayError("IBM-001"); // IdeaBoxManager container not found
-            return;
-        }
-        if (e.target.id === 'add-idea-button') {
+    const addIdeaButton = document.getElementById('add-idea-button');
+    if (addIdeaButton) {
+        addIdeaButton.addEventListener('click', function() {
             window.location.href = 'create_new_idea.html';
-        }
-    });
+        });
+    } else {
+        // Use a more appropriate error or just a warning if button is optional
+        console.warn("'add-idea-button' not found."); 
+        // displayError("LH-XXX"); // Create a new error code if this is critical
+    }
 
     // Handle overlay/modal close
     const overlayBg = document.getElementById('overlayBackground');
