@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>Create New Idea - Markdown Editor</title>
+    <link rel="stylesheet" href="styles/style.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+</head>
+<body>
+    <div class="top-menu">
+        <div class="title_TopMenuLeft">
+            <h1>Idea Store Project</h1>
+        </div>
+        <div class="searchbar_TopMenuRight">
+            <input type="text" name="SearchBar_Ideas" id="ideasSearch" placeholder="Search for Project...">
+            <button type="button" id="searchButton">Search</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="side-menu">
+            <ul>
+                <a href="index.html"><li>Home</li></a>
+                <!--<a href="#"><li>Archive</li></a>-->
+                <!--<a href="#"><li>Recycle Bin</li></a>-->
+                <a href="#"><li id="side-menu-UI_settings">Settings</li></a>
+            </ul>
+        </div>
+
+        <div class="content">
+            <div class="markdown-editor-wrapper">
+                <div class="editor-toolbar">
+                    <button data-cmd="bold"><i class="fa fa-bold"></i></button>
+                    <button data-cmd="italic"><i class="fa fa-italic"></i></button>
+                    <button data-cmd="strike"><i class="fa fa-strikethrough"></i></button>
+                    <button data-cmd="h1">H1</button>
+                    <button data-cmd="h2">H2</button>
+                    <button data-cmd="h3">H3</button>
+                    <button data-cmd="ul"><i class="fa fa-list-ul"></i></button>
+                    <button data-cmd="ol"><i class="fa fa-list-ol"></i></button>
+                    <button data-cmd="task">☑</button>
+                    <button data-cmd="quote"><i class="fa fa-quote-left"></i></button>
+                    <button data-cmd="hr"><i class="fa fa-minus"></i> HR</button>
+                    <button data-cmd="link"><i class="fa fa-link"></i></button>
+                    <button data-cmd="image"><i class="fa fa-image"></i></button>
+                    <button data-cmd="code-inline"><i class="fa fa-code"></i></button>
+                    <button data-cmd="code-block"><i class="fa fa-file-code"></i></button>
+                    <button data-cmd="table"><i class="fa fa-table"></i></button>
+                    <button data-cmd="STT"><i class="fa-solid fa-microphone"></i></button>
+                    <button data-cmd="save" class="save-button"><i class="fa fa-save"></i> Save</button>
+                </div>
+
+                <div class="editor-area">
+                    <div class="markdown-input" contenteditable="true" spellcheck="false" data-placeholder="Write your idea…"></div>
+                    <div class="markdown-preview markdown-body"></div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="idea-bodyOfInformation-page hide small-wrapper">
+            <div class="idea-bodyOfInformation-wrapper">
+                <div class="idea-bodyOfInformation-header">
+                    <h2>Save Your Idea</h2>
+                </div>
+                <div class="idea-bodyOfInformation-content">
+                  <form id="ideaForm">
+                    <label for="ideaTitle">Title:</label>
+                    <input type="text" id="ideaTitle" name="ideaTitle" required /> <br />
+                    <button type="submit" id="PLD_ETE">Save Idea</button>
+                  </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <div class="overlay-background" id="overlayBackground"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="scripts/logic_editor.js"></script>
+    <script src="scripts/logic_home.js"></script>
+    <script src="scripts/globals.js"></script>
+        <script>
+        marked.setOptions({
+          highlight: function(code, lang) {
+            const language = hljs.getLanguage(lang) ? lang : 'plaintext';
+            return hljs.highlight(code, { language, ignoreIllegals: true }).value;
+          }
+        });
+
+        function updatePreview() {
+          const markdownInput = document.querySelector('.markdown-input');
+          const preview = document.querySelector('.markdown-preview');
+          const markdownText = markdownInput.innerText;
+          preview.innerHTML = marked.parse(markdownText);
+          hljs.highlightAll();
+        }
+
+        document.querySelector('.markdown-input').addEventListener('input', updatePreview);
+        updatePreview();
+    </script>
+</body>
+</html>

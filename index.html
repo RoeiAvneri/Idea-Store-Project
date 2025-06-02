@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="styles/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <title>Home</title>
+</head>
+<body>
+    <div class="top-menu">
+        <div class="title_TopMenuLeft">
+            <h1>Idea Store Project</h1>
+        </div>
+        <div class="searchbar_TopMenuRight">
+            <input type="text" name="SearchBar_Ideas" id="ideasSearch" placeholder="Search for Project...">
+            <button type="button" id="searchButton">Search</button>
+        </div>
+    </div>
+    <div class="container">
+        <div class="side-menu">
+            <ul>
+                <a href="index.html"><li>Home</li></a>
+                <!--<a href="#"><li>Archive</li></a>-->
+                <!--<a href="#"><li>Recycle Bin</li></a>-->
+                <a href="#"><li id="side-menu-UI_settings">Settings</li></a>
+            </ul>
+        </div>
+        <div class="content">
+            <div class="idea-content-wrapper" id="ideabox-wrapper"></div>
+            <div class="idea-content-button-wrapper">
+                <button type="button" class="idea-content-button" id="add-idea-button">+</button>
+            </div>
+            <div class="idea-bodyOfInformation-page big-wrapper hide">
+                <div class="idea-bodyOfInformation-topmenu">
+                    <button type="button" class="idea-bodyOfInformation-edit-button" id="ACTION_editbutton"><i class="fa fa-pencil"></i></button>
+                    <button type="button" class="idea-bodyOfInformation-close-button" id="closeButton"><i class="fa">X</i></button>
+                </div>
+                <div class="markdown-preview markdown-body preview-mode"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="overlay-background" id="overlayBackground"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js"></script>
+
+    <script src="scripts/ErrorHandler.js"></script>
+    <script src="scripts/globals.js"></script>
+    <script src="scripts/logic_home.js"></script>
+</body>
+</html>
