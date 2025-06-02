@@ -18,6 +18,6 @@
     "googleapis": "^118.0.0",
     "marked": "^15.0.12",
     "mime-types": "^2.1.35",
-    "postgres": "^3.5.1"
+    "postgres": "^3.0.0"
   }
 }
