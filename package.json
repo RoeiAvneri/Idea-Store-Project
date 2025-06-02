@@ -1,15 +1,7 @@
 {
-  "dependencies": {
-    "better-sqlite3": "^11.10.0",
-    "body-parser": "^2.2.0",
-    "cors": "^2.8.5",
-    "express": "^5.1.0",
-    "marked": "^15.0.12",
-    "googleapis": "^118.0.0"
-
-  },
   "name": "ideas-stores-project",
   "version": "1.0.0",
+  "description": "",
   "main": "server.js",
   "scripts": {
     "start": "node server.js"
@@ -17,5 +9,15 @@
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": ""
+  "dependencies": {
+    "better-sqlite3": "^11.10.0",
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.0.3",
+    "express": "^5.1.0",
+    "googleapis": "^118.0.0",
+    "marked": "^15.0.12",
+    "mime-types": "^2.1.35",
+    "postgres": "^3.5.1"
+  }
 }
