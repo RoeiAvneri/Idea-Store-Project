@@ -249,7 +249,7 @@ async function SendLoadout(title, content) {
     const responseElement = document.getElementById('response'); // Assume it exists
 
     try {
-        const res = await fetch('httpsssssss://httpssssssss://idea-store-project.onrender.com:10000/save', {
+        const res = await fetch('https://idea-store-project.onrender.com:10000/save', {
             method: 'POST',
             headers: {
                 'Content-Type': 'text/plain', // Server expects title in query, content in body
@@ -285,7 +285,7 @@ async function SendLoadout(title, content) {
 }
 
 async function GetLoadout(id) {
-    const url = id ? `httpsssssss://httpssssssss://idea-store-project.onrender.com:10000/entries/${id}` : 'httpsssssss://httpssssssss://idea-store-project.onrender.com:10000/entries';
+    const url = id ? `https://idea-store-project.onrender.com:10000/entries/${id}` : 'https://idea-store-project.onrender.com:10000/entries';
     const specificErrorCodeBase = id ? "GL-002" : "GL-001"; // GL-002 for single, GL-001 for list
     const jsonErrorCode = id ? "GL-004" : "GL-003";
 
@@ -360,7 +360,7 @@ async function GetLoadoutContent(id, title) {
             return null;
         }
         
-        const resp = await fetch(`httpsssssss://httpssssssss://idea-store-project.onrender.com:10000/load/${file_load}`);
+        const resp = await fetch(`https://idea-store-project.onrender.com:10000/load/${file_load}`);
         if (!resp.ok) {
             displayError("GLC-005"); // Failed to fetch file content (server error)
             return null;
@@ -385,7 +385,7 @@ async function GetLoadoutContent(id, title) {
 
 async function updateLoadoutContent(id, newTextContent) {
   try {
-    const response = await fetch(`httpsssssss://httpssssssss://idea-store-project.onrender.com:10000/update/${id}`, {
+    const response = await fetch(`https://idea-store-project.onrender.com:10000/update/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'text/plain' },
       body: newTextContent
