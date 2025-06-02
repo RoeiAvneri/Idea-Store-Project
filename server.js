@@ -13,16 +13,31 @@ import postgres from 'postgres';
 import 'dotenv/config';
 
 // Ensure DATABASE_URL is defined
-const connectionString = process.env.DATABASE_URL;
-if (!connectionString) {
+const DATABASE_URL = process.env.DATABASE_URL;
+if (!DATABASE_URL) {
   console.error("❌  Missing DATABASE_URL environment variable");
   process.exit(1);
 }
 
-// Instantiate the postgres client, enabling SSL (Supabase requires SSL)
-const sql = postgres(connectionString, {
-  ssl: { rejectUnauthorized: false }
-});
+let sql;
+try {
+  // Use the WHATWG URL parser to extract username, password, host, port, database name
+  const dbUrl = new URL(DATABASE_URL);
+  
+  sql = postgres({
+    host: dbUrl.hostname,                 // e.g. "db.oetfjwasgtydkckxpzoy.supabase.co"
+    port:   Number(dbUrl.port),           // e.g. 5432
+    database: dbUrl.pathname.slice(1),    // e.g. "postgres"
+    username: dbUrl.username,             // e.g. "postgres"
+    password: dbUrl.password,             // your DB password
+    ssl: {
+      rejectUnauthorized: false           // Supabase requires SSL
+    }
+  });
+} catch (err) {
+  console.error("❌ Failed to parse or connect with DATABASE_URL:", err);
+  process.exit(1);
+}
 
 // Create the "entries" table if it doesn’t already exist
 await sql`
@@ -45,6 +60,7 @@ const corsOptions = {
   origin: [
     'https://roeiavneri.github.io',          // Your GitHub Pages origin
     'http://localhost:3000',
+    'https://idea-store-project.onrender.com',
     'http://127.0.0.1:3000',
     'http://localhost:5500'
   ],
